@@ -9,7 +9,7 @@ up:
 local:
 	cd src/tests
 	echo "$(PWD)"
-	MOM_HOST="localhost" PYTHONPATH="$(PWD)/src" pytest
+	MOM_HOST="localhost" PYTHONPATH="$(PWD)/src" python -m pytest
 .PHONY: local
 
 down:
