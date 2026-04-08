@@ -7,11 +7,14 @@ from .middleware import MessageMiddlewareCloseError, MessageMiddlewareDisconnect
 class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 
     def __init__(self, host, queue_name):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host))
-        self.channel = self.connection.channel()
-        self.queue_name = queue_name
-        self.channel.queue_declare(queue=queue_name, durable=True)
-        self.consuming = False
+        try:
+            self.connection = pika.BlockingConnection(pika.ConnectionParameters(host))
+            self.channel = self.connection.channel()
+            self.queue_name = queue_name
+            self.channel.queue_declare(queue=queue_name, durable=True)
+            self.consuming = False
+        except Exception as e:
+            raise MessageMiddlewareMessageError(str(e))
 
     def start_consuming(self, on_message_callback):
         if self.consuming:
@@ -67,19 +70,22 @@ class MessageMiddlewareQueueRabbitMQ(MessageMiddlewareQueue):
 class MessageMiddlewareExchangeRabbitMQ(MessageMiddlewareExchange):
     
     def __init__(self, host, exchange_name, routing_keys):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host))
-        self.channel = self.connection.channel()
-        self.exchange_name = exchange_name
-        self.routing_keys = routing_keys
-        self.channel.exchange_declare(exchange=exchange_name, exchange_type='direct', durable=True)
+        try:
+            self.connection = pika.BlockingConnection(pika.ConnectionParameters(host))
+            self.channel = self.connection.channel()
+            self.exchange_name = exchange_name
+            self.routing_keys = routing_keys
+            self.channel.exchange_declare(exchange=exchange_name, exchange_type='direct', durable=True)
 
-        result = self.channel.queue_declare(queue='', exclusive=True)
-        self.queue_name = result.method.queue
+            result = self.channel.queue_declare(queue='', exclusive=True)
+            self.queue_name = result.method.queue
 
-        for key in routing_keys:
-            self.channel.queue_bind(exchange=exchange_name, queue=self.queue_name, routing_key=key)
+            for key in routing_keys:
+                self.channel.queue_bind(exchange=exchange_name, queue=self.queue_name, routing_key=key)
 
-        self.consuming = False
+            self.consuming = False
+        except Exception as e:
+            raise MessageMiddlewareMessageError(str(e))
 
     def start_consuming(self, on_message_callback):
         if self.consuming:
